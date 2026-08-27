@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Workforce Analytics — Personnel Review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+  :root{
+    --ink:#1B2A41;
+    --ink-soft:#334257;
+    --paper:#F3EFE4;
+    --paper-card:#FBF9F3;
+    --manila:#E6DCC0;
+    --teal:#3E7C74;
+    --teal-soft:#DCEAE7;
+    --amber:#C9972B;
+    --amber-soft:#F6E9CC;
+    --brick:#A3432F;
+    --brick-soft:#F3DFD8;
+    --line:#D8D0BC;
+    --shadow: 0 2px 8px rgba(27,42,65,0.08);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    background-image:
+      repeating-linear-gradient(0deg, rgba(27,42,65,0.025) 0px, rgba(27,42,65,0.025) 1px, transparent 1px, transparent 32px);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{ max-width:1180px; margin:0 auto; padding:28px 24px 60px; }
+
+  /* ---------- Header / masthead ---------- */
+  .masthead{
+    display:flex; justify-content:space-between; align-items:flex-end;
+    border-bottom:3px solid var(--ink); padding-bottom:16px; margin-bottom:6px;
+    flex-wrap:wrap; gap:16px;
+  }
+  .masthead-left .eyebrow{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--ink-soft); margin-bottom:6px;
+  }
+  .masthead-left h1{
+    font-family:'IBM Plex Serif', serif; font-weight:700; font-size:34px;
+    margin:0; letter-spacing:-0.01em;
+  }
+  .masthead-left .sub{ font-size:14px; color:var(--ink-soft); margin-top:6px; }
+  .stamp{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.08em;
+    color:var(--brick); border:1.5px solid var(--brick); padding:6px 10px;
+    transform:rotate(-2deg); border-radius:3px; text-transform:uppercase;
+    white-space:nowrap; height:fit-content;
+  }
+  .filing-strip{
+    display:flex; gap:18px; font-family:'IBM Plex Mono', monospace; font-size:11.5px;
+    color:var(--ink-soft); padding:10px 2px 22px; flex-wrap:wrap; letter-spacing:.02em;
+  }
+  .filing-strip span b{ color:var(--ink); }
+
+  /* ---------- KPI ledger row ---------- */
+  .kpi-row{ display:grid; grid-template-columns:repeat(4, 1fr); gap:14px; margin-bottom:26px; }
+  .kpi{
+    background:var(--paper-card); border:1px solid var(--line); border-radius:6px;
+    padding:16px 18px; box-shadow:var(--shadow); position:relative; overflow:hidden;
+  }
+  .kpi::before{
+    content:""; position:absolute; left:0; top:0; bottom:0; width:5px; background:var(--kpi-accent, var(--teal));
+  }
+  .kpi .label{ font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-soft); font-weight:600; }
+  .kpi .value{ font-family:'IBM Plex Serif', serif; font-size:30px; font-weight:700; margin-top:6px; }
+  .kpi .note{ font-size:12px; color:var(--ink-soft); margin-top:4px; }
+
+  /* ---------- Folder tabs ---------- */
+  .tabs{ display:flex; gap:4px; margin-bottom:0; padding-left:4px; }
+  .tab-btn{
+    font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:.05em; text-transform:uppercase;
+    background:var(--manila); color:var(--ink-soft); border:1px solid var(--line); border-bottom:none;
+    padding:10px 20px 12px; border-radius:8px 8px 0 0; cursor:pointer; position:relative; top:1px;
+    transition:all .15s ease; font-weight:600;
+  }
+  .tab-btn.active{ background:var(--paper-card); color:var(--ink); box-shadow:0 -2px 6px rgba(27,42,65,0.06); }
+  .tab-btn:not(.active):hover{ background:#EFE6CB; }
+  .panel{
+    background:var(--paper-card); border:1px solid var(--line); border-radius:0 8px 8px 8px;
+    padding:26px; box-shadow:var(--shadow);
+  }
+  .panel-section{ display:none; }
+  .panel-section.active{ display:block; }
+
+  h2.section-title{
+    font-family:'IBM Plex Serif', serif; font-size:19px; font-weight:600; margin:0 0 4px;
+  }
+  p.section-sub{ font-size:13px; color:var(--ink-soft); margin:0 0 18px; }
+
+  .grid-2{ display:grid; grid-template-columns:1.3fr 1fr; gap:22px; margin-bottom:22px; }
+  .grid-2-even{ display:grid; grid-template-columns:1fr 1fr; gap:22px; margin-bottom:22px; }
+  .chart-card{
+    border:1px solid var(--line); border-radius:6px; padding:16px 18px 10px; background:#fff;
+  }
+  .chart-card h3{
+    font-size:13px; font-weight:600; text-transform:uppercase; letter-spacing:.04em;
+    color:var(--ink-soft); margin:0 0 12px;
+  }
+  .chart-wrap{ position:relative; height:230px; }
+  .chart-wrap.tall{ height:280px; }
+
+  .callout{
+    display:flex; gap:10px; align-items:flex-start; background:var(--amber-soft);
+    border:1px solid var(--amber); border-radius:6px; padding:12px 14px; font-size:13px;
+    margin-top:4px; color:#5C4712;
+  }
+  .callout.brick{ background:var(--brick-soft); border-color:var(--brick); color:#5C1E10; }
+  .callout.teal{ background:var(--teal-soft); border-color:var(--teal); color:#1D4038; }
+  .callout b{ font-weight:700; }
+  .callout .tag{
+    font-family:'IBM Plex Mono', monospace; font-size:10px; text-transform:uppercase;
+    letter-spacing:.06em; font-weight:700; flex-shrink:0; margin-top:2px;
+  }
+
+  table.risk-table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+  table.risk-table th{
+    text-align:left; font-family:'IBM Plex Mono', monospace; font-size:10.5px; text-transform:uppercase;
+    letter-spacing:.05em; color:var(--ink-soft); border-bottom:2px solid var(--ink); padding:8px 10px;
+  }
+  table.risk-table td{ padding:8px 10px; border-bottom:1px solid var(--line); }
+  table.risk-table tr:hover td{ background:#F7F3E7; }
+  .id-cell{ font-family:'IBM Plex Mono', monospace; color:var(--ink-soft); }
+  .sat-badge{
+    display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600;
+    background:var(--brick-soft); color:var(--brick);
+  }
+
+  .footer-note{
+    margin-top:24px; font-size:11.5px; color:var(--ink-soft); font-family:'IBM Plex Mono', monospace;
+    border-top:1px dashed var(--line); padding-top:14px;
+  }
+
+  @media (max-width: 860px){
+    .kpi-row{ grid-template-columns:1fr 1fr; }
+    .grid-2, .grid-2-even{ grid-template-columns:1fr; }
+    .masthead{ flex-direction:column; align-items:flex-start; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="masthead">
+    <div class="masthead-left">
+      <div class="eyebrow">People Analytics · Internal Report</div>
+      <h1>Workforce Analytics Review</h1>
+      <div class="sub">1,800 employee records spanning FY2018–2026 · 8 departments · SQLite source: hr_analytics.db</div>
+    </div>
+    <div class="stamp">Prepared for Leadership Review</div>
+  </div>
+
+  <div class="filing-strip">
+    <span>RECORD SET: <b>employees.csv → hr_analytics.db</b></span>
+    <span>ROWS: <b>1,800</b></span>
+    <span>AS OF: <b>26 AUG 2026</b></span>
+    <span>ANALYST: <b>People Analytics Team</b></span>
+  </div>
+
+  <div class="kpi-row" id="kpiRow"></div>
+
+  <div class="tabs" id="tabButtons"></div>
+  <div class="panel" id="panelHost">
+    <section class="panel-section" id="panel-overview">
+      <h2 class="section-title">Workforce Overview</h2>
+      <p class="section-sub">Current headcount composition and hiring trend across the reporting period.</p>
+      <div class="grid-2">
+        <div class="chart-card">
+          <h3>Headcount by Department (Active)</h3>
+          <div class="chart-wrap tall"><canvas id="chartHeadcountDept"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>Workforce by Job Level</h3>
+          <div class="chart-wrap tall"><canvas id="chartJobLevel"></canvas></div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h3>Hires by Year</h3>
+        <div class="chart-wrap"><canvas id="chartHiringTrend"></canvas></div>
+      </div>
+    </section>
+
+    <section class="panel-section" id="panel-attrition">
+      <h2 class="section-title">Attrition Drivers</h2>
+      <p class="section-sub">Where and why employees are leaving.</p>
+      <div class="grid-2">
+        <div class="chart-card">
+          <h3>Attrition Rate by Department</h3>
+          <div class="chart-wrap tall"><canvas id="chartAttrDept"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>Separation Reasons</h3>
+          <div class="chart-wrap tall"><canvas id="chartTermReason"></canvas></div>
+        </div>
+      </div>
+      <div class="grid-2-even">
+        <div class="chart-card">
+          <h3>Attrition Rate by Tenure — Flight Risk Window</h3>
+          <div class="chart-wrap"><canvas id="chartTenureBucket"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>Attrition &amp; Satisfaction by Monthly Overtime</h3>
+          <div class="chart-wrap"><canvas id="chartOvertime"></canvas></div>
+        </div>
+      </div>
+      <div class="callout brick">
+        <span class="tag">Finding</span>
+        <div><b>New hires are the single biggest attrition exposure.</b> Employees under 1 year of tenure separate at 47.8%, nearly 3x the year-2-4 rate — most of that gap closes by year 4, so the first 12 months of onboarding and management quality is where a retention program pays off fastest.</div>
+      </div>
+    </section>
+
+    <section class="panel-section" id="panel-compensation">
+      <h2 class="section-title">Compensation</h2>
+      <p class="section-sub">Pay levels by department and a within-level pay equity check.</p>
+      <div class="grid-2">
+        <div class="chart-card">
+          <h3>Average Salary by Department (Active)</h3>
+          <div class="chart-wrap tall"><canvas id="chartSalaryDept"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>Avg. Salary by Gender, within Job Level</h3>
+          <div class="chart-wrap tall"><canvas id="chartPayGap"></canvas></div>
+        </div>
+      </div>
+      <div class="callout amber">
+        <span class="tag">Finding</span>
+        <div><b>A modest but consistent pay gap favors men at every level</b>, ranging 1.4%–5.8% and widest at Associate and Lead. It's not extreme, but it's systemic rather than random — worth a level-by-level compensation audit.</div>
+      </div>
+    </section>
+
+    <section class="panel-section" id="panel-retention">
+      <h2 class="section-title">Retention Risk</h2>
+      <p class="section-sub">Stagnation signal and a working list of high performers most likely to leave next.</p>
+      <div class="grid-2-even">
+        <div class="chart-card">
+          <h3>Attrition by Months Since Last Promotion</h3>
+          <div class="chart-wrap"><canvas id="chartPromo"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>Attrition Rate by Work Arrangement</h3>
+          <div class="chart-wrap"><canvas id="chartRemote"></canvas></div>
+        </div>
+      </div>
+      <div class="chart-card" style="margin-top:22px;">
+        <h3>Top Flight-Risk High Performers (Active, Rating ≥ 4, Satisfaction ≤ 2.5)</h3>
+        <table class="risk-table" id="riskTable">
+          <thead><tr>
+            <th>ID</th><th>Name</th><th>Dept</th><th>Level</th><th>Rating</th><th>Satisfaction</th><th>OT hrs/mo</th><th>Mo. Since Promo</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="callout teal" style="margin-top:16px;">
+        <span class="tag">Recommendation</span>
+        <div>The table above is a ready-made outreach list: 25 active, high-performing employees with satisfaction at or below 2.5. Prioritizing 1:1 check-ins and promotion/comp reviews for this group is the single highest-leverage retention action available in this dataset.</div>
+      </div>
+    </section>
+  </div>
+
+  <div class="footer-note">
+    SOURCE: hr_workforce_data.csv (synthetic dataset generated for this project, seeded for reproducibility) · SCHEMA: schema.sql · QUERIES: queries.sql (14 queries, Q1–Q14) · Built with SQLite + Chart.js.
+  </div>
+</div>
+
+<script>
+const DATA = {"Q1": [{"department": "Customer Support", "total_ever_employed": 274, "current_headcount": 192, "separations": 82, "attrition_rate_pct": 29.9}, {"department": "Sales", "total_ever_employed": 323, "current_headcount": 236, "separations": 87, "attrition_rate_pct": 26.9}, {"department": "Operations", "total_ever_employed": 231, "current_headcount": 175, "separations": 56, "attrition_rate_pct": 24.2}, {"department": "IT", "total_ever_employed": 182, "current_headcount": 155, "separations": 27, "attrition_rate_pct": 14.8}, {"department": "Marketing", "total_ever_employed": 157, "current_headcount": 134, "separations": 23, "attrition_rate_pct": 14.6}, {"department": "HR", "total_ever_employed": 113, "current_headcount": 100, "separations": 13, "attrition_rate_pct": 11.5}, {"department": "Engineering", "total_ever_employed": 359, "current_headcount": 321, "separations": 38, "attrition_rate_pct": 10.6}, {"department": "Finance", "total_ever_employed": 161, "current_headcount": 149, "separations": 12, "attrition_rate_pct": 7.5}], "Q2": [{"overall_attrition_rate_pct": 18.8, "total_ever_employed": 1800, "current_headcount": 1462}], "Q3": [{"tenure_bucket": "0. Under 1 year", "headcount": 293, "attrition_rate_pct": 47.8}, {"tenure_bucket": "1. 1-2 years", "headcount": 256, "attrition_rate_pct": 26.6}, {"tenure_bucket": "2. 2-4 years", "headcount": 463, "attrition_rate_pct": 18.4}, {"tenure_bucket": "3. 4-7 years", "headcount": 581, "attrition_rate_pct": 7.4}, {"tenure_bucket": "4. 7+ years", "headcount": 207, "attrition_rate_pct": 1.0}], "Q4": [{"performance_rating": 1, "headcount": 141, "attrition_rate_pct": 20.6}, {"performance_rating": 2, "headcount": 514, "attrition_rate_pct": 22.6}, {"performance_rating": 3, "headcount": 733, "attrition_rate_pct": 16.8}, {"performance_rating": 4, "headcount": 365, "attrition_rate_pct": 18.4}, {"performance_rating": 5, "headcount": 47, "attrition_rate_pct": 6.4}], "Q5": [{"overtime_bucket": "0. <5 hrs", "headcount": 328, "attrition_rate_pct": 12.8, "avg_satisfaction": 3.41}, {"overtime_bucket": "1. 5-15 hrs", "headcount": 1035, "attrition_rate_pct": 17.3, "avg_satisfaction": 3.14}, {"overtime_bucket": "2. 15-25 hrs", "headcount": 421, "attrition_rate_pct": 26.1, "avg_satisfaction": 2.88}, {"overtime_bucket": "3. 25+ hrs", "headcount": 16, "attrition_rate_pct": 43.8, "avg_satisfaction": 2.89}], "Q6": [{"work_arrangement": "Onsite", "headcount": 653, "attrition_rate_pct": 21.6}, {"work_arrangement": "Hybrid", "headcount": 797, "attrition_rate_pct": 18.2}, {"work_arrangement": "Remote", "headcount": 350, "attrition_rate_pct": 14.9}], "Q7": [{"job_level": "Entry", "avg_salary_male": 66645.0, "avg_salary_female": 63834.0, "pct_gap_male_over_female": 4.4}, {"job_level": "Associate", "avg_salary_male": 86434.0, "avg_salary_female": 82192.0, "pct_gap_male_over_female": 5.2}, {"job_level": "Senior", "avg_salary_male": 112113.0, "avg_salary_female": 110619.0, "pct_gap_male_over_female": 1.4}, {"job_level": "Lead", "avg_salary_male": 136159.0, "avg_salary_female": 128662.0, "pct_gap_male_over_female": 5.8}, {"job_level": "Manager", "avg_salary_male": 161924.0, "avg_salary_female": 158359.0, "pct_gap_male_over_female": 2.3}, {"job_level": "Director", "avg_salary_male": 219127.0, "avg_salary_female": 214170.0, "pct_gap_male_over_female": 2.3}], "Q8": [{"employment_status": "Active", "avg_tenure_years": 4.1}, {"employment_status": "Terminated", "avg_tenure_years": 1.9}], "Q9": [{"termination_reason": "Voluntary - Better Opportunity", "count": 102, "pct_of_all_departures": 30.2}, {"termination_reason": "Involuntary - Performance", "count": 94, "pct_of_all_departures": 27.8}, {"termination_reason": "Involuntary - Restructuring", "count": 61, "pct_of_all_departures": 18.0}, {"termination_reason": "Voluntary - Personal", "count": 55, "pct_of_all_departures": 16.3}, {"termination_reason": "Voluntary - Relocation", "count": 26, "pct_of_all_departures": 7.7}], "Q10": [{"months_since_promo_bucket": "0. <12 mo", "headcount": 973, "attrition_rate_pct": 19.2}, {"months_since_promo_bucket": "1. 12-24 mo", "headcount": 432, "attrition_rate_pct": 16.7}, {"months_since_promo_bucket": "2. 24-36 mo", "headcount": 241, "attrition_rate_pct": 17.8}, {"months_since_promo_bucket": "3. 36+ mo", "headcount": 154, "attrition_rate_pct": 23.4}], "Q11": [{"department": "Engineering", "headcount": 321, "avg_salary": 138388.0}, {"department": "Finance", "headcount": 149, "avg_salary": 114450.0}, {"department": "IT", "headcount": 155, "avg_salary": 109277.0}, {"department": "Sales", "headcount": 236, "avg_salary": 102320.0}, {"department": "Marketing", "headcount": 134, "avg_salary": 97801.0}, {"department": "HR", "headcount": 100, "avg_salary": 95118.0}, {"department": "Operations", "headcount": 175, "avg_salary": 80704.0}, {"department": "Customer Support", "headcount": 192, "avg_salary": 68943.0}], "Q12": [{"hire_year": 2018, "hires": 92}, {"hire_year": 2019, "hires": 231}, {"hire_year": 2020, "hires": 227}, {"hire_year": 2021, "hires": 231}, {"hire_year": 2022, "hires": 199}, {"hire_year": 2023, "hires": 228}, {"hire_year": 2024, "hires": 240}, {"hire_year": 2025, "hires": 233}, {"hire_year": 2026, "hires": 119}], "Q13": [{"employee_id": "E10849", "full_name": "George Martin", "department": "Engineering", "job_level": "Associate", "performance_rating": 4, "job_satisfaction": 1.0, "monthly_overtime_hours": 14.0, "months_since_last_promotion": 9}, {"employee_id": "E10182", "full_name": "David Gonzalez", "department": "Operations", "job_level": "Senior", "performance_rating": 4, "job_satisfaction": 1.4, "monthly_overtime_hours": 8.2, "months_since_last_promotion": 46}, {"employee_id": "E10824", "full_name": "Larry Nguyen", "department": "Customer Support", "job_level": "Lead", "performance_rating": 4, "job_satisfaction": 1.8, "monthly_overtime_hours": 12.0, "months_since_last_promotion": 30}, {"employee_id": "E10284", "full_name": "Stephen Johnson", "department": "Finance", "job_level": "Senior", "performance_rating": 4, "job_satisfaction": 1.9, "monthly_overtime_hours": 1.5, "months_since_last_promotion": 35}, {"employee_id": "E10575", "full_name": "Robert Torres", "department": "Sales", "job_level": "Lead", "performance_rating": 4, "job_satisfaction": 2.0, "monthly_overtime_hours": 15.8, "months_since_last_promotion": 14}, {"employee_id": "E10743", "full_name": "Mary Martin", "department": "Marketing", "job_level": "Associate", "performance_rating": 4, "job_satisfaction": 2.0, "monthly_overtime_hours": 13.2, "months_since_last_promotion": 9}, {"employee_id": "E11604", "full_name": "Rebecca Young", "department": "Engineering", "job_level": "Entry", "performance_rating": 4, "job_satisfaction": 2.0, "monthly_overtime_hours": 7.1, "months_since_last_promotion": 25}, {"employee_id": "E10531", "full_name": "Richard Perez", "department": "Engineering", "job_level": "Lead", "performance_rating": 4, "job_satisfaction": 2.1, "monthly_overtime_hours": 6.3, "months_since_last_promotion": 87}, {"employee_id": "E11317", "full_name": "Ronald Anderson", "department": "Sales", "job_level": "Senior", "performance_rating": 4, "job_satisfaction": 2.1, "monthly_overtime_hours": 10.0, "months_since_last_promotion": 14}, {"employee_id": "E10038", "full_name": "Ashley Robinson", "department": "Customer Support", "job_level": "Senior", "performance_rating": 4, "job_satisfaction": 2.2, "monthly_overtime_hours": 13.9, "months_since_last_promotion": 16}, {"employee_id": "E10295", "full_name": "John Scott", "department": "Sales", "job_level": "Lead", "performance_rating": 4, "job_satisfaction": 2.2, "monthly_overtime_hours": 16.5, "months_since_last_promotion": 23}, {"employee_id": "E10617", "full_name": "Jonathan Walker", "department": "Sales", "job_level": "Associate", "performance_rating": 4, "job_satisfaction": 2.2, "monthly_overtime_hours": 21.3, "months_since_last_promotion": 0}, {"employee_id": "E10678", "full_name": "Richard Clark", "department": "Marketing", "job_level": "Entry", "performance_rating": 4, "job_satisfaction": 2.2, "monthly_overtime_hours": 7.3, "months_since_last_promotion": 4}, {"employee_id": "E11601", "full_name": "Paul Hill", "department": "Sales", "job_level": "Associate", "performance_rating": 4, "job_satisfaction": 2.2, "monthly_overtime_hours": 19.8, "months_since_last_promotion": 8}, {"employee_id": "E10191", "full_name": "Emily Miller", "department": "IT", "job_level": "Entry", "performance_rating": 4, "job_satisfaction": 2.3, "monthly_overtime_hours": 9.0, "months_since_last_promotion": 16}, {"employee_id": "E10200", "full_name": "Patricia Brown", "department": "Customer Support", "job_level": "Associate", "performance_rating": 4, "job_satisfaction": 2.3, "monthly_overtime_hours": 7.7, "months_since_last_promotion": 15}, {"employee_id": "E10533", "full_name": "Emily Ramirez", "department": "Engineering", "job_level": "Entry", "performance_rating": 4, "job_satisfaction": 2.3, "monthly_overtime_hours": 5.1, "months_since_last_promotion": 15}, {"employee_id": "E10695", "full_name": "Jonathan White", "department": "Engineering", "job_level": "Associate", "performance_rating": 4, "job_satisfaction": 2.3, "monthly_overtime_hours": 10.0, "months_since_last_promotion": 13}, {"employee_id": "E10937", "full_name": "Susan Williams", "department": "IT", "job_level": "Entry", "performance_rating": 4, "job_satisfaction": 2.3, "monthly_overtime_hours": 7.8, "months_since_last_promotion": 41}, {"employee_id": "E11248", "full_name": "Kevin Taylor", "department": "Customer Support", "job_level": "Senior", "performance_rating": 5, "job_satisfaction": 2.4, "monthly_overtime_hours": 16.9, "months_since_last_promotion": 0}, {"employee_id": "E10192", "full_name": "Rebecca Williams", "department": "IT", "job_level": "Associate", "performance_rating": 4, "job_satisfaction": 2.4, "monthly_overtime_hours": 13.7, "months_since_last_promotion": 51}, {"employee_id": "E10821", "full_name": "Larry Wright", "department": "Engineering", "job_level": "Entry", "performance_rating": 4, "job_satisfaction": 2.4, "monthly_overtime_hours": 22.8, "months_since_last_promotion": 21}, {"employee_id": "E11210", "full_name": "David Ramirez", "department": "Sales", "job_level": "Director", "performance_rating": 4, "job_satisfaction": 2.4, "monthly_overtime_hours": 20.8, "months_since_last_promotion": 26}, {"employee_id": "E11216", "full_name": "Daniel Garcia", "department": "Marketing", "job_level": "Manager", "performance_rating": 4, "job_satisfaction": 2.4, "monthly_overtime_hours": 15.5, "months_since_last_promotion": 7}, {"employee_id": "E11587", "full_name": "Barbara Young", "department": "Customer Support", "job_level": "Entry", "performance_rating": 4, "job_satisfaction": 2.4, "monthly_overtime_hours": 10.6, "months_since_last_promotion": 46}], "Q14": [{"job_level": "Entry", "headcount": 331, "pct_of_workforce": 22.6}, {"job_level": "Associate", "headcount": 404, "pct_of_workforce": 27.6}, {"job_level": "Senior", "headcount": 337, "pct_of_workforce": 23.1}, {"job_level": "Lead", "headcount": 215, "pct_of_workforce": 14.7}, {"job_level": "Manager", "headcount": 126, "pct_of_workforce": 8.6}, {"job_level": "Director", "headcount": 49, "pct_of_workforce": 3.4}]};
+
+function fmtPct(n){ return n.toFixed(1) + '%'; }
+function fmtMoney(n){ return '$' + Math.round(n).toLocaleString('en-US'); }
+
+// ---------- KPI row ----------
+const overall = DATA.Q2[0];
+const tenureByStatus = Object.fromEntries(DATA.Q8.map(r => [r.employment_status, r.avg_tenure_years]));
+const genderGapAvg = (DATA.Q7.reduce((a,r)=>a+r.pct_gap_male_over_female,0)/DATA.Q7.length).toFixed(1);
+const topDept = DATA.Q1[0];
+
+const kpis = [
+  { label:'Current Headcount', value: overall.current_headcount.toLocaleString(), note: `${overall.total_ever_employed.toLocaleString()} total records on file`, accent:'var(--teal)' },
+  { label:'Overall Attrition Rate', value: fmtPct(overall.overall_attrition_rate_pct), note:'Across all departments, FY2018–2026', accent:'var(--brick)' },
+  { label:'Avg. Tenure, Active Staff', value: tenureByStatus['Active'].toFixed(1) + ' yrs', note:`Departed staff averaged ${tenureByStatus['Terminated'].toFixed(1)} yrs`, accent:'var(--teal)' },
+  { label:'Avg. Gender Pay Gap', value: genderGapAvg + '%', note:'Male vs. female, controlled by job level', accent:'var(--amber)' },
+];
+document.getElementById('kpiRow').innerHTML = kpis.map(k => `
+  <div class="kpi" style="--kpi-accent:${k.accent}">
+    <div class="label">${k.label}</div>
+    <div class="value">${k.value}</div>
+    <div class="note">${k.note}</div>
+  </div>`).join('');
+
+// ---------- Tabs ----------
+const tabs = [
+  {id:'overview', label:'Overview'},
+  {id:'attrition', label:'Attrition'},
+  {id:'compensation', label:'Compensation'},
+  {id:'retention', label:'Retention Risk'},
+];
+document.getElementById('tabButtons').innerHTML = tabs.map((t,i)=>
+  `<button class="tab-btn${i===0?' active':''}" data-tab="${t.id}">${t.label}</button>`
+).join('');
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.panel-section').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
+  });
+});
+document.getElementById('panel-overview').classList.add('active');
+
+// ---------- Chart theme ----------
+Chart.defaults.font.family = "'IBM Plex Sans', sans-serif";
+Chart.defaults.color = '#334257';
+Chart.defaults.plugins.legend.labels.boxWidth = 12;
+Chart.defaults.plugins.legend.labels.font = {size: 11};
+
+const PALETTE = ['#3E7C74','#C9972B','#A3432F','#5B7FA6','#8A6BAE','#6E8B3D','#B4763F','#4A5568'];
+const gridColor = 'rgba(27,42,65,0.08)';
+
+function baseScales(extra={}){
+  return Object.assign({
+    x:{ grid:{display:false}, ticks:{font:{size:11}} },
+    y:{ grid:{color:gridColor}, ticks:{font:{size:11}}, beginAtZero:true }
+  }, extra);
+}
+
+// ---------- Overview charts ----------
+new Chart(document.getElementById('chartHeadcountDept'), {
+  type:'bar',
+  data:{
+    labels: [...DATA.Q11].sort((a,b)=>b.headcount-a.headcount).map(r=>r.department),
+    datasets:[{ label:'Active Headcount', data:[...DATA.Q11].sort((a,b)=>b.headcount-a.headcount).map(r=>r.headcount), backgroundColor:'#3E7C74', borderRadius:4 }]
+  },
+  options:{ indexAxis:'y', plugins:{legend:{display:false}}, scales:{ x:{grid:{color:gridColor},beginAtZero:true}, y:{grid:{display:false}} } }
+});
+
+new Chart(document.getElementById('chartJobLevel'), {
+  type:'doughnut',
+  data:{
+    labels: DATA.Q14.map(r=>r.job_level),
+    datasets:[{ data: DATA.Q14.map(r=>r.headcount), backgroundColor: PALETTE, borderColor:'#fff', borderWidth:2 }]
+  },
+  options:{ plugins:{ legend:{ position:'right' } }, cutout:'55%' }
+});
+
+new Chart(document.getElementById('chartHiringTrend'), {
+  type:'line',
+  data:{
+    labels: DATA.Q12.map(r=>r.hire_year),
+    datasets:[{ label:'Hires', data: DATA.Q12.map(r=>r.hires), borderColor:'#1B2A41', backgroundColor:'rgba(27,42,65,0.08)', fill:true, tension:0.3, pointRadius:3 }]
+  },
+  options:{ plugins:{legend:{display:false}}, scales: baseScales() }
+});
+
+// ---------- Attrition charts ----------
+new Chart(document.getElementById('chartAttrDept'), {
+  type:'bar',
+  data:{
+    labels: DATA.Q1.map(r=>r.department),
+    datasets:[{ label:'Attrition Rate %', data: DATA.Q1.map(r=>r.attrition_rate_pct), backgroundColor: DATA.Q1.map(r=> r.attrition_rate_pct >= 20 ? '#A3432F' : r.attrition_rate_pct >= 12 ? '#C9972B' : '#3E7C74'), borderRadius:4 }]
+  },
+  options:{ plugins:{legend:{display:false}}, scales: baseScales() }
+});
+
+new Chart(document.getElementById('chartTermReason'), {
+  type:'doughnut',
+  data:{
+    labels: DATA.Q9.map(r=>r.termination_reason),
+    datasets:[{ data: DATA.Q9.map(r=>r.count), backgroundColor: PALETTE, borderColor:'#fff', borderWidth:2 }]
+  },
+  options:{ plugins:{ legend:{ position:'right', labels:{font:{size:10.5}} } }, cutout:'55%' }
+});
+
+new Chart(document.getElementById('chartTenureBucket'), {
+  type:'bar',
+  data:{
+    labels: DATA.Q3.map(r=>r.tenure_bucket.replace(/^\d\.\s/,'')),
+    datasets:[{ label:'Attrition Rate %', data: DATA.Q3.map(r=>r.attrition_rate_pct), backgroundColor:'#A3432F', borderRadius:4 }]
+  },
+  options:{ plugins:{legend:{display:false}}, scales: baseScales() }
+});
+
+new Chart(document.getElementById('chartOvertime'), {
+  data:{
+    labels: DATA.Q5.map(r=>r.overtime_bucket.replace(/^\d\.\s/,'')),
+    datasets:[
+      { type:'bar', label:'Attrition Rate %', data: DATA.Q5.map(r=>r.attrition_rate_pct), backgroundColor:'#C9972B', borderRadius:4, yAxisID:'y' },
+      { type:'line', label:'Avg Satisfaction (1-5)', data: DATA.Q5.map(r=>r.avg_satisfaction), borderColor:'#1B2A41', backgroundColor:'#1B2A41', yAxisID:'y1', tension:0.3, pointRadius:3 }
+    ]
+  },
+  options:{
+    scales:{
+      x:{ grid:{display:false} },
+      y:{ position:'left', grid:{color:gridColor}, title:{display:true,text:'Attrition %',font:{size:10}}, beginAtZero:true },
+      y1:{ position:'right', grid:{display:false}, title:{display:true,text:'Satisfaction',font:{size:10}}, min:0, max:5 }
+    },
+    plugins:{ legend:{ position:'bottom', labels:{font:{size:10.5}} } }
+  }
+});
+
+// ---------- Compensation charts ----------
+new Chart(document.getElementById('chartSalaryDept'), {
+  type:'bar',
+  data:{
+    labels: DATA.Q11.map(r=>r.department),
+    datasets:[{ label:'Avg Salary', data: DATA.Q11.map(r=>r.avg_salary), backgroundColor:'#5B7FA6', borderRadius:4 }]
+  },
+  options:{ plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:(c)=>fmtMoney(c.parsed.y) } } }, scales: baseScales({ y:{ grid:{color:gridColor}, ticks:{ callback:(v)=>'$'+(v/1000)+'k' } } }) }
+});
+
+new Chart(document.getElementById('chartPayGap'), {
+  type:'bar',
+  data:{
+    labels: DATA.Q7.map(r=>r.job_level),
+    datasets:[
+      { label:'Male', data: DATA.Q7.map(r=>r.avg_salary_male), backgroundColor:'#3E7C74', borderRadius:3 },
+      { label:'Female', data: DATA.Q7.map(r=>r.avg_salary_female), backgroundColor:'#C9972B', borderRadius:3 }
+    ]
+  },
+  options:{ plugins:{ legend:{position:'bottom'}, tooltip:{ callbacks:{ label:(c)=>c.dataset.label+': '+fmtMoney(c.parsed.y) } } }, scales: baseScales({ y:{ grid:{color:gridColor}, ticks:{ callback:(v)=>'$'+(v/1000)+'k' } } }) }
+});
+
+// ---------- Retention charts ----------
+new Chart(document.getElementById('chartPromo'), {
+  type:'bar',
+  data:{
+    labels: DATA.Q10.map(r=>r.months_since_promo_bucket.replace(/^\d\.\s/,'')),
+    datasets:[{ label:'Attrition Rate %', data: DATA.Q10.map(r=>r.attrition_rate_pct), backgroundColor:'#8A6BAE', borderRadius:4 }]
+  },
+  options:{ plugins:{legend:{display:false}}, scales: baseScales() }
+});
+
+new Chart(document.getElementById('chartRemote'), {
+  type:'bar',
+  data:{
+    labels: DATA.Q6.map(r=>r.work_arrangement),
+    datasets:[{ label:'Attrition Rate %', data: DATA.Q6.map(r=>r.attrition_rate_pct), backgroundColor:['#A3432F','#C9972B','#3E7C74'], borderRadius:4 }]
+  },
+  options:{ plugins:{legend:{display:false}}, scales: baseScales() }
+});
+
+// ---------- Risk table ----------
+const tbody = document.querySelector('#riskTable tbody');
+tbody.innerHTML = DATA.Q13.map(r => `
+  <tr>
+    <td class="id-cell">${r.employee_id}</td>
+    <td>${r.full_name}</td>
+    <td>${r.department}</td>
+    <td>${r.job_level}</td>
+    <td>${r.performance_rating} / 5</td>
+    <td><span class="sat-badge">${r.job_satisfaction.toFixed(1)}</span></td>
+    <td>${r.monthly_overtime_hours.toFixed(1)}</td>
+    <td>${r.months_since_last_promotion}</td>
+  </tr>`).join('');
+</script>
+</body>
+</html>
